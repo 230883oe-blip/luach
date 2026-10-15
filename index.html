@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<style>
+  :root{
+    --free:#e8f6ec; --free-b:#2e7d4f;
+    --grp:#fff5d9;  --grp-b:#b07d00;
+    --lock:#fde8e6;  --lock-b:#b3261e;
+    --ink:#1f2328; --mut:#5b6471; --line:#d7dce3; --bg:#f4f6f9;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+       font-family:"Segoe UI",Arial,Helvetica,sans-serif;font-size:16px}
+  header{background:#17355c;color:#fff;padding:12px 14px}
+  header h1{margin:0;font-size:19px}
+  header p{margin:3px 0 0;font-size:13px;opacity:.85}
+  .wrap{max-width:1050px;margin:0 auto;padding:12px}
+  .bar{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:10px 0}
+  .bar h2{margin:0;font-size:18px}
+  button,.btn{font:inherit;cursor:pointer;border:1px solid var(--line);background:#fff;
+    border-radius:9px;padding:8px 12px}
+  button.primary{background:#17355c;color:#fff;border-color:#17355c}
+  button.danger{background:#fff;color:#b3261e;border-color:#f0b7b3}
+  button:disabled{opacity:.5;cursor:default}
+  .legend{display:flex;gap:12px;flex-wrap:wrap;font-size:13px;color:var(--mut);margin:6px 0}
+  .legend i{display:inline-block;width:13px;height:13px;border-radius:3px;vertical-align:-2px;margin-left:4px}
+  table.cal{width:100%;border-collapse:collapse;background:#fff;
+    border:1px solid var(--line);border-radius:12px;overflow:hidden}
+  table.cal th{background:#eceff4;font-size:13px;padding:6px 2px;color:var(--mut);
+    border:1px solid var(--line)}
+  table.cal td{border:1px solid var(--line);vertical-align:top;height:86px;width:14.28%;
+    padding:3px;cursor:pointer}
+  td.free{background:var(--free)} td.grouped{background:var(--grp)} td.locked{background:var(--lock)}
+  td.out{opacity:.38} td.past{filter:grayscale(.55)}
+  td.today{outline:2px solid #17355c;outline-offset:-2px}
+  .daynum{font-weight:700;font-size:13px;color:var(--mut)}
+  .chip{background:#fff;border:1px solid var(--line);border-right:4px solid var(--lock-b);
+    border-radius:7px;padding:3px 5px;margin-top:3px;font-size:12px;line-height:1.35}
+  .chip.g{border-right-color:var(--grp-b)}
+  .chip b{display:block;font-size:12.5px}
+  .chip span{display:block;color:var(--mut);font-size:11px}
+  .chip .frc{color:#b3261e;font-weight:700}
+  .modal{position:fixed;inset:0;background:rgba(15,20,30,.55);display:flex;
+    align-items:flex-start;justify-content:center;padding:14px;overflow:auto;z-index:9}
+  .card{background:#fff;border-radius:14px;padding:16px;max-width:520px;width:100%;margin-top:18px}
+  .card.wide{max-width:900px}
+  .card h3{margin:0 0 4px;font-size:17px}
+  .card .sub{color:var(--mut);font-size:13px;margin:0 0 10px}
+  label{display:block;margin:9px 0 3px;font-size:13.5px;color:var(--mut)}
+  input,select,textarea{width:100%;font:inherit;padding:9px;border:1px solid var(--line);
+    border-radius:9px;background:#fff}
+  .row{display:flex;gap:8px;flex-wrap:wrap}
+  .row>*{flex:1;min-width:140px}
+  .acts{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap}
+  .note{padding:9px 11px;border-radius:9px;font-size:13.5px;margin:8px 0}
+  .note.bad{background:var(--lock);color:#7a1811}
+  .note.ok{background:var(--free);color:#1d5c38}
+  .note.warn{background:var(--grp);color:#6b4b00}
+  .tbl{width:100%;border-collapse:collapse;font-size:13.5px;margin-top:8px}
+  .tbl th,.tbl td{border-bottom:1px solid var(--line);padding:6px 5px;text-align:right}
+  .tbl th{color:var(--mut);font-weight:600}
+  .mini{font-size:12.5px;color:var(--mut)}
+  .link{word-break:break-all;background:#f0f3f7;padding:8px;border-radius:8px;font-size:12px}
+  .center{text-align:center;padding:26px;color:var(--mut)}
+  @media(max-width:620px){
+    table.cal td{height:72px;font-size:11px}
+    .chip span{display:none} .chip b{font-size:11.5px}
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>לוח המבחנים · <span id="cls"></span></h1>
+  <p>בהנהלת <span id="prn"></span> · מבחן אחד ביום לכיתה, למעט הקבצות במתמטיקה ובאנגלית</p>
+</header>
+
+<div class="wrap">
+  <div class="bar">
+    <button id="prev">‹ חודש קודם</button>
+    <h2 id="mtitle">טוען…</h2>
+    <button id="next">חודש הבא ›</button>
+  </div>
+  <div class="bar">
+    <div class="legend">
+      <span><i style="background:var(--free);border:1px solid var(--free-b)"></i>פנוי</span>
+      <span><i style="background:var(--grp);border:1px solid var(--grp-b)"></i>פתוח להקבצה נוספת</span>
+      <span><i style="background:var(--lock);border:1px solid var(--lock-b)"></i>תפוס</span>
+    </div>
+    <div class="row" style="flex:0 0 auto">
+      <button id="tomonth">לחודש הנוכחי</button>
+      <button id="adminbtn">אזור ניהול</button>
+    </div>
+  </div>
+
+  <div id="msg"></div>
+  <div id="cal" class="center">טוען את הלוח…</div>
+  <p class="mini">לחיצה על יום פותחת שיבוץ מבחן. מורה יכול למחוק רק מבחן שהוא עצמו שיבץ, מאותו מכשיר.</p>
+</div>
+
+<div id="modal"></div>
+
+<script>
+var API_URL = "https://script.google.com/macros/s/AKfycbxVKvYVHOuPGRM8SOZzmygqhuF41uhsPhPMYIfuOFCgN8dIxoQMYgxuuUbb8sxiOYJ6/exec";
+var BOOT_FALLBACK = {"ok": true, "className": "כיתה י'4", "principal": "יאיר עזראן", "subjects": ["תנ\"ך", "תושב\"ע", "לשון", "מתמטיקה", "אנגלית", "ניהול עסקי", "ספרות", "מחשבת ישראל"], "timeSlots": ["שעה 1-2 (08:00-09:30)", "שעה 3-4 (09:45-11:15)", "שעה 5-6 (11:30-13:00)", "שעה 7-8 (13:15-14:45)", "08:00-10:00", "10:00-12:00"], "grouped": ["מתמטיקה", "אנגלית"], "heDays": ["א", "ב", "ג", "ד", "ה", "ו", "ש"]};
+var BOOT = null;
+var ST = { ym:null, data:null, token:null, code:null, owner:null };
+
+function $(id){ return document.getElementById(id); }
+function esc(s){ return String(s==null?"":s).replace(/[&<>"]/g,function(c){
+  return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]; }); }
+
+function store(k,v){ try{ if(v===undefined) return localStorage.getItem(k);
+  localStorage.setItem(k,v); }catch(e){ return null; } }
+
+function owner(){
+  if(ST.owner) return ST.owner;
+  var o = store("eb_owner");
+  if(!o){ o = "o" + Math.random().toString(36).slice(2) + Date.now().toString(36); store("eb_owner",o); }
+  ST.owner = o; return o;
+}
+
+function call(name, args, cb){
+  args = args || {};
+  args.token = ST.token || "";
+  args.code  = ST.code  || "";
+  args.owner = owner();
+  args.api   = name;
+  args._     = String(Date.now());
+  var body = [];
+  for(var k in args){
+    if(!Object.prototype.hasOwnProperty.call(args,k)) continue;
+    var v = args[k];
+    if(v === undefined || v === null) v = "";
+    body.push(encodeURIComponent(k)+"="+encodeURIComponent(String(v)));
+  }
+  body = body.join("&");
+  /* GET כל עוד הכתובת קצרה (מהיר ועובד בכל דפדפן מוטמע); אחרת POST
+     עם form-urlencoded, שגם הוא בקשה פשוטה ולכן בלי preflight של CORS. */
+  var opt, url;
+  if(body.length < 1800){
+    url = API_URL + "?" + body;
+    opt = { method:"GET", redirect:"follow" };
+  } else {
+    url = API_URL;
+    opt = { method:"POST", redirect:"follow", body:body,
+            headers:{ "Content-Type":"application/x-www-form-urlencoded;charset=UTF-8" } };
+  }
+  fetch(url, opt).then(function(res){ return res.json(); })
+    .then(function(r){ cb(r||{ok:false,msg:"אין תשובה."}); })
+    .catch(function(e){ cb({ok:false,msg:"אין חיבור לשרת: "+(e&&e.message||e)}); });
+}
+
+function flash(text, kind){
+  $("msg").innerHTML = text ? '<div class="note '+(kind||"ok")+'">'+esc(text)+'</div>' : "";
+  if(text) setTimeout(function(){ $("msg").innerHTML=""; }, 7000);
+}
+
+function closeModal(){ $("modal").innerHTML=""; }
+
+/* ------------------------------------------------------------- הלוח */
+
+function load(ym){
+  ST.ym = ym || ST.ym;
+  call("board", { ym: ST.ym }, function(r){
+    if(r.gate){ askCode(); return; }
+    if(!r.ok){ $("cal").innerHTML = '<div class="center">'+esc(r.msg||"שגיאה")+'</div>'; return; }
+    ST.data = r; ST.ym = r.ym;
+    $("cls").textContent = r.className; $("prn").textContent = r.principal;
+    $("mtitle").textContent = r.monthName + " " + r.year;
+    $("adminbtn").textContent = r.isAdmin ? "אזור ניהול (מחובר)" : "אזור ניהול";
+    draw(r);
+  });
+}
+
+function draw(r){
+  var h = '<table class="cal"><thead><tr>';
+  BOOT.heDays.forEach(function(d){ h += "<th>"+d+"</th>"; });
+  h += "</tr></thead><tbody>";
+  r.weeks.forEach(function(w){
+    h += "<tr>";
+    w.forEach(function(c){
+      var cls = "cell " + c.state + (c.inMonth?"":" out") + (c.isToday?" today":"") + (c.isPast?" past":"");
+      h += '<td class="'+cls+'" data-d="'+c.iso+'" title="'+esc(c.label)+'">';
+      h += '<div class="daynum">'+c.day+"</div>";
+      c.exams.forEach(function(e){
+        var g = BOOT.grouped.indexOf(e.subject)>=0;
+        h += '<div class="chip'+(g?" g":"")+'">';
+        h += "<b>"+esc(e.subject)+(e.stream?" · "+esc(e.stream):"")+"</b>";
+        if(e.time_slot) h += "<span>"+esc(e.time_slot)+"</span>";
+        if(e.teacher)   h += "<span>"+esc(e.teacher)+"</span>";
+        if(e.notes)     h += "<span>"+esc(e.notes)+"</span>";
+        if(e.forced)    h += '<span class="frc">שובץ בעקיפת חוק</span>';
+        h += "</div>";
+      });
+      h += "</td>";
+    });
+    h += "</tr>";
+  });
+  h += "</tbody></table>";
+  $("cal").innerHTML = h;
+  Array.prototype.forEach.call(document.querySelectorAll("td.cell"), function(td){
+    td.onclick = function(){ dayDialog(td.getAttribute("data-d")); };
+  });
+}
+
+function cellOf(iso){
+  var out = null;
+  (ST.data.weeks||[]).forEach(function(w){ w.forEach(function(c){ if(c.iso===iso) out=c; }); });
+  return out;
+}
+
+/* ------------------------------------------------- דיאלוג יום / שיבוץ */
+
+function dayDialog(iso){
+  var c = cellOf(iso); if(!c) return;
+  var isAdmin = ST.data.isAdmin;
+  var subs = ST.data.subjects, slots = ST.data.timeSlots;
+  var blocked = c.state === "locked" && !isAdmin;
+
+  var h = '<div class="modal" id="ov"><div class="card">';
+  h += "<h3>"+esc(iso)+" · "+esc(c.label)+"</h3>";
+  h += '<p class="sub">'+(c.state==="free" ? "היום פנוי לשיבוץ." :
+        c.state==="grouped" ? ("ביום הזה כבר יש מבחן ב"+esc(c.openSubject)+". מותרת הקבצה נוספת באותו מקצוע בלבד.") :
+        "היום תפוס. מבחן אחד ביום בלבד.")+"</p>";
+
+  if(c.exams.length){
+    h += '<table class="tbl"><tr><th>מקצוע</th><th>שעה</th><th>מורה</th><th></th></tr>';
+    c.exams.forEach(function(e){
+      h += "<tr><td>"+esc(e.subject)+(e.stream?" · "+esc(e.stream):"")+"</td><td>"+
+           esc(e.time_slot)+"</td><td>"+esc(e.teacher)+"</td><td>";
+      h += '<button class="danger" data-del="'+e.id+'">מחיקה</button></td></tr>';
+    });
+    h += "</table>";
+  }
+
+  if(blocked){
+    h += '<div class="note bad">אי אפשר לשבץ מבחן נוסף ביום הזה. אפשר לבחור יום אחר שמסומן בירוק.</div>';
+  } else {
+    var only = (c.state==="grouped" && !isAdmin) ? c.openSubject : null;
+    h += "<label>מקצוע</label><select id=f_sub>";
+    subs.forEach(function(s){
+      if(only && s!==only) return;
+      h += '<option value="'+esc(s)+'">'+esc(s)+"</option>";
+    });
+    h += "</select>";
+    h += '<div class="row"><div><label>שעה</label><select id=f_time><option value="">ללא שעה</option>';
+    slots.forEach(function(s){ h += '<option value="'+esc(s)+'">'+esc(s)+"</option>"; });
+    h += '</select></div><div><label>הקבצה (למתמטיקה/אנגלית)</label><input id=f_stream placeholder="למשל: הקבצה א"></div></div>';
+    h += '<div class="row"><div><label>שם המורה</label><input id=f_teacher></div>';
+    h += '<div><label>הערה</label><input id=f_notes placeholder="חומר למבחן, חדר וכו\'"></div></div>';
+    if(isAdmin && c.state!=="free"){
+      h += '<label><input type=checkbox id=f_force style="width:auto"> לשבץ בכל זאת, בעקיפת החוק (מנהל)</label>';
+    }
+    h += '<div class="acts"><button class="primary" id=f_save>שיבוץ המבחן</button>';
+    h += '<button id=f_close>ביטול</button></div>';
+  }
+  if(blocked) h += '<div class="acts"><button id=f_close>סגירה</button></div>';
+  h += "</div></div>";
+  $("modal").innerHTML = h;
+
+  if($("f_close")) $("f_close").onclick = closeModal;
+  if($("f_save")) $("f_save").onclick = function(){
+    var a = { date: iso, subject: $("f_sub").value, time_slot: $("f_time").value,
+              stream: $("f_stream").value, teacher: $("f_teacher").value,
+              notes: $("f_notes").value,
+              force: ($("f_force") && $("f_force").checked) ? "1" : "" };
+    $("f_save").disabled = true; $("f_save").textContent = "שומר…";
+    call("add", a, function(r){
+      if(!r.ok){ $("f_save").disabled=false; $("f_save").textContent="שיבוץ המבחן";
+                 flash(r.msg,"bad"); closeModal(); return; }
+      closeModal(); flash(r.msg + (r.note?" "+r.note:""), "ok"); load();
+    });
+  };
+  Array.prototype.forEach.call(document.querySelectorAll("[data-del]"), function(b){
+    b.onclick = function(){
+      if(!confirm("למחוק את המבחן?")) return;
+      call("del", { id: b.getAttribute("data-del") }, function(r){
+        closeModal(); flash(r.msg, r.ok?"ok":"bad"); if(r.ok) load();
+      });
+    };
+  });
+  $("ov").onclick = function(ev){ if(ev.target.id==="ov") closeModal(); };
+}
+
+/* ------------------------------------------------------- קוד לצוות */
+
+function askCode(){
+  var h = '<div class="modal"><div class="card"><h3>קוד כניסה לצוות</h3>';
+  h += '<p class="sub">הלוח מוגן בקוד שהמנהל חילק לצוות.</p>';
+  h += "<input id=c_code type=password><div class=acts><button class=primary id=c_ok>כניסה</button></div></div></div>";
+  $("modal").innerHTML = h;
+  $("c_ok").onclick = function(){
+    ST.code = $("c_code").value; store("eb_code", ST.code); closeModal(); load();
+  };
+}
+
+/* -------------------------------------------------------- אזור ניהול */
+
+function adminDialog(){
+  if(!ST.data || !ST.data.isAdmin){ loginDialog(); return; }
+  call("admin", {}, function(r){
+    if(!r.ok){ ST.token=null; store("eb_token",""); loginDialog(); return; }
+    var h = '<div class="modal" id="ov2"><div class="card wide"><h3>אזור ניהול</h3>';
+    h += '<p class="sub">כל השיבוצים, יומן פעולות והגדרות.</p>';
+    h += '<p class="mini">הקישור למורים:</p><div class="link">'+esc(r.url)+"</div>";
+
+    h += "<h3 style='margin-top:14px'>כל המבחנים ("+r.exams.length+")</h3>";
+    if(r.exams.length){
+      h += '<table class="tbl"><tr><th>תאריך</th><th>מקצוע</th><th>שעה</th><th>מורה</th><th>הערה</th><th></th></tr>';
+      r.exams.forEach(function(e){
+        h += "<tr><td>"+esc(e.date)+"</td><td>"+esc(e.subject)+(e.stream?" · "+esc(e.stream):"")+
+             "</td><td>"+esc(e.time_slot)+"</td><td>"+esc(e.teacher)+"</td><td>"+esc(e.notes)+
+             (e.forced?' <span class="frc">בעקיפת חוק</span>':"")+"</td><td>"+
+             '<button data-ad="'+e.id+'">הזזה</button> <button class="danger" data-del2="'+e.id+'">מחיקה</button></td></tr>';
+      });
+      h += "</table>";
+    } else { h += '<p class="mini">אין עדיין שיבוצים.</p>'; }
+
+    h += "<h3 style='margin-top:14px'>הגדרות</h3>";
+    h += '<div class="row"><div><label>סיסמת מנהל חדשה</label><input id=s_pass type=password placeholder="להשארה ריק - בלי שינוי"></div>';
+    h += '<div><label>קוד כניסה לצוות (ריק = פתוח לכל מי שיש לו הקישור)</label><input id=s_code value="'+esc(r.teacherCode)+'"></div></div>';
+    h += '<div class="acts"><button class="primary" id=s_save>שמירת הגדרות</button>';
+    h += '<button id=s_exp>הורדת גיבוי</button><button id=s_out>יציאה</button><button id=s_close>סגירה</button></div>';
+
+    h += "<h3 style='margin-top:14px'>יומן פעולות</h3>";
+    h += '<table class="tbl"><tr><th>מתי</th><th>מי</th><th>פעולה</th><th>פרטים</th></tr>';
+    r.audit.slice(0,40).forEach(function(a){
+      h += "<tr><td>"+esc(a.at)+"</td><td>"+esc(a.who)+"</td><td>"+esc(a.action)+"</td><td>"+esc(a.detail)+"</td></tr>";
+    });
+    h += "</table></div></div>";
+    $("modal").innerHTML = h;
+
+    $("s_close").onclick = closeModal;
+    $("s_out").onclick = function(){ ST.token=null; store("eb_token",""); closeModal(); flash("יצאת מאזור הניהול.","ok"); load(); };
+    $("s_save").onclick = function(){
+      call("settings", { new_pass: $("s_pass").value, teacher_code: $("s_code").value },
+        function(x){ flash(x.msg, x.ok?"ok":"bad"); if(x.ok) closeModal(); });
+    };
+    $("s_exp").onclick = function(){
+      call("export", {}, function(x){
+        if(!x.ok){ flash(x.msg,"bad"); return; }
+        var a = document.createElement("a");
+        a.href = "data:application/json;charset=utf-8," + encodeURIComponent(JSON.stringify(x.exams,null,1));
+        a.download = "exam-board-backup.json"; a.click();
+      });
+    };
+    Array.prototype.forEach.call(document.querySelectorAll("[data-del2]"), function(b){
+      b.onclick = function(){
+        if(!confirm("למחוק את המבחן?")) return;
+        call("del", { id: b.getAttribute("data-del2") }, function(x){
+          flash(x.msg, x.ok?"ok":"bad"); if(x.ok){ closeModal(); load(); adminDialog(); }
+        });
+      };
+    });
+    Array.prototype.forEach.call(document.querySelectorAll("[data-ad]"), function(b){
+      b.onclick = function(){
+        var d = prompt("לאיזה תאריך להזיז? (בפורמט 2026-11-03)");
+        if(!d) return;
+        call("edit", { id: b.getAttribute("data-ad"), date: d, force: "1" }, function(x){
+          flash(x.msg, x.ok?"ok":"bad"); if(x.ok){ closeModal(); load(); }
+        });
+      };
+    });
+  });
+}
+
+function loginDialog(){
+  var h = '<div class="modal"><div class="card"><h3>כניסת מנהל</h3>';
+  h += '<p class="sub">אזור הניהול מיועד למנהל הכיתה בלבד.</p>';
+  h += "<label>סיסמה</label><input id=l_pass type=password>";
+  h += '<div class="acts"><button class="primary" id=l_ok>כניסה</button><button id=l_x>ביטול</button></div></div></div>';
+  $("modal").innerHTML = h;
+  $("l_x").onclick = closeModal;
+  $("l_ok").onclick = function(){
+    call("login", { pass: $("l_pass").value }, function(r){
+      if(!r.ok){ flash(r.msg,"bad"); return; }
+      ST.token = r.token; store("eb_token", r.token);
+      closeModal(); flash("שלום יאיר, אתה מחובר כמנהל.","ok");
+      load();
+    });
+  };
+}
+
+/* ------------------------------------------------------------- התחלה */
+
+function start(){
+  $("prev").onclick = function(){ load(ST.data.prev); };
+  $("next").onclick = function(){ load(ST.data.next); };
+  $("tomonth").onclick = function(){ load(ST.data.thisMonth); };
+  $("adminbtn").onclick = adminDialog;
+
+  ST.token = store("eb_token") || null;
+  ST.code  = store("eb_code")  || null;
+  $("cls").textContent = BOOT.className; $("prn").textContent = BOOT.principal;
+  load(null);
+}
+
+/* טעינת ההגדרות מהשרת, ואז התחלה. BOOT_FALLBACK מאפשר ללוח לעלות גם אם
+   קריאת ההגדרות נכשלה פעם אחת, כדי שהמורה לא יראה מסך ריק. */
+(function boot(tries){
+  fetch(API_URL + "?api=boot&_=" + Date.now(), { redirect:"follow" })
+    .then(function(r){ return r.json(); })
+    .then(function(r){
+      if(!r || !r.ok) throw new Error(r && r.msg || "boot");
+      BOOT = r; start();
+    })
+    .catch(function(e){
+      if(tries > 0){ setTimeout(function(){ boot(tries-1); }, 1200); return; }
+      BOOT = BOOT_FALLBACK; start();
+      flash("ההגדרות נטענו מגיבוי מקומי. אם הלוח ריק - רענן את הדף.","warn");
+    });
+})(2);
+</script>
+</body>
+</html>
